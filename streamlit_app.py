@@ -57,11 +57,5 @@ if uploaded:
     else:
         st.write("No anomalies detected.")
 
-    # Save outputs for Deliverables 8 and 11
-    df.to_csv("predictions.csv", index=False)
-    with open("weekly_summary.txt", "w") as f:
-        f.write(summary)
-    st.success("Saved predictions.csv and weekly_summary.txt")
-
 else:
     st.info("Please upload a CSV file with 'date' and 'output_kwh' columns to get started.")
