@@ -1,55 +1,51 @@
-import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
 
-st.set_page_config(page_title="Energy AI Dashboard", layout="wide")
+# === Step 1: Load Cleaned Dataset ===
+df = pd.read_csv("cleaned_data.csv")
+df['date'] = pd.to_datetime(df['date'])
 
-st.title("⚡ Energy Monitoring Dashboard")
+# === Step 2: Feature Engineering ===
+df['rolling_7d'] = df['output_kwh'].rolling(window=7, min_periods=1).mean()
+df['weekday'] = df['date'].dt.weekday
+df['lag_1'] = df['output_kwh'].shift(1)
 
-# Sidebar for file upload
-uploaded = st.sidebar.file_uploader("Upload your energy CSV", type=["csv"])
+# Remove NaN caused by lag
+df.dropna(inplace=True)
 
-if uploaded:
-    df = pd.read_csv(uploaded)
+# === Step 3: Train Isolation Forest Model ===
+features = ['output_kwh', 'rolling_7d', 'weekday', 'lag_1']
+model = IsolationForest(
+    contamination=0.03,
+    n_estimators=150,
+    max_samples='auto',
+    random_state=42
+)
+model.fit(df[features])
 
-    # Ensure date is datetime format
-    if 'date' not in df.columns or 'output_kwh' not in df.columns:
-        st.error("CSV must include 'date' and 'output_kwh' columns.")
-    else:
-        df['date'] = pd.to_datetime(df['date'])
+# === Step 4: Predict Anomalies ===
+df['anomaly'] = model.predict(df[features]) == -1
 
-        st.subheader("📈 Energy Output Chart")
-        st.line_chart(df.set_index('date')['output_kwh'])
+# === Step 5: Save Predictions ===
+predictions = df[['date', 'output_kwh', 'anomaly']]
+predictions.to_csv("predictions.csv", index=False)
 
-        # Run anomaly detection
-        model = IsolationForest(contamination=0.05)
-        df['anomaly'] = model.fit_predict(df[['output_kwh']]) == -1
-        anomalies = df[df['anomaly'] == True]
+# === Step 6: Generate Summary ===
+avg_kwh = df['output_kwh'].mean()
+peak_kwh = df['output_kwh'].max()
+anomaly_dates = df[df['anomaly']]['date'].dt.strftime("%b %d").tolist()
 
-        # Display summary (mock or real)
-        st.subheader("📝 Weekly Summary")
-        summary_text = "Anomalies detected on June 5 and 9."  # Replace with GPT summary if available
-        st.markdown(f"**Summary:** {summary_text}")
+summary = (
+    f"Summarize site performance: "
+    f"Avg = {avg_kwh:.2f} kWh, "
+    f"Anomalies = {', '.join(anomaly_dates)}, "
+    f"Peak = {peak_kwh:.2f} kWh"
+)
 
-        # Show anomaly chart
-        st.subheader("🚨 Anomaly Visualization")
-        fig, ax = plt.subplots()
-        ax.plot(df["date"], df["output_kwh"], label="Output (kWh)")
-        ax.scatter(anomalies["date"], anomalies["output_kwh"], color="red", label="Anomaly")
-        ax.set_title("Energy Output with Anomalies")
-        ax.legend()
-        st.pyplot(fig)
+# === Step 7: Save Summary ===
+with open("weekly_summary.txt", "w") as f:
+    f.write(summary)
 
-        # Show alert table
-        st.subheader("📋 Anomaly Alerts Table")
-        st.dataframe(anomalies[["date", "output_kwh"]])
-
-        # Export CSV for Zapier
-        csv_name = "alerts_today.csv"
-        anomalies[["date", "output_kwh"]].to_csv(csv_name, index=False)
-        st.success(f"Anomaly data saved to {csv_name}. Ready for Zapier automation.")
-        st.download_button("⬇ Download Alerts CSV", data=open(csv_name, "rb"), file_name=csv_name)
-
-else:
-    st.info("Please upload a CSV file with 'date' and 'output_kwh' columns.")
+print("Pipeline complete. Files generated:")
+print("- predictions.csv")
+print("- weekly_summary.txt")
