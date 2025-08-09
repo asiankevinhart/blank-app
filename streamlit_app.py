@@ -7,7 +7,7 @@ st.title("Energy AI Dashboard")
 
 uploaded = st.file_uploader("Upload Energy Data (CSV)", type=["csv"])
 if uploaded:
-    df = pd.read_csv(https://raw.githubusercontent.com/asiankevinhart/cleaned_data/refs/heads/master/streamlit_app.py)
+    df = pd.read_csv(uploaded)
     df['date'] = pd.to_datetime(df['date'])
 
     st.subheader("Energy Output")
