@@ -59,17 +59,3 @@ if uploaded:
 
 else:
     st.info("Please upload a CSV file with 'date' and 'output_kwh' columns to get started.")
-
-import os
-
-# Full path to your Zapier watch folder
-zapier_folder = r"G:\My Drive\Zapier Watch"
-
-# Make sure folder exists
-os.makedirs(zapier_folder, exist_ok=True)
-
-# Save anomalies to that folder
-alerts_path = os.path.join(zapier_folder, "alerts_today.csv")
-anomalies[["date", "output_kwh"]].to_csv(alerts_path, index=False)
-
-st.success(f"Exported alerts_today.csv to {alerts_path}")
