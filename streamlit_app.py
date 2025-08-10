@@ -1,59 +1,45 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.ensemble import IsolationForest
 import os
+import pandas as pd
+import streamlit as st
+from datetime import datetime
 
-# ===== CONFIG =====
-# Change this to your local Google Drive folder path
-# Example for Windows with Google Drive for Desktop:
+# Your Zapier folder path
 GOOGLE_DRIVE_FOLDER = r"G:\My Drive\Zapier Watch"
 
-st.title("Energy AI Dashboard")
+# Ensure the folder exists
+os.makedirs(GOOGLE_DRIVE_FOLDER, exist_ok=True)
 
-# File uploader
-uploaded = st.file_uploader("Upload Energy Data (CSV)", type=["csv"])
+st.title("Energy Data Anomaly Detection")
 
-if uploaded:
-    # Load data
-    df = pd.read_csv(uploaded)
+uploaded_file = st.file_uploader("Upload Energy Data CSV", type=["csv"])
 
-    # Ensure date is in datetime format
-    df['date'] = pd.to_datetime(df['date'])
+if uploaded_file is not None:
+    # Read uploaded CSV
+    df = pd.read_csv(uploaded_file)
+    st.write("Data preview:")
+    st.dataframe(df.head())
 
-    # Show basic chart
-    st.subheader("Energy Output Over Time")
-    st.line_chart(df['output_kwh'])
+    # Example anomaly detection logic (replace with your own)
+    # For demonstration, we'll create a dummy anomalies dataframe:
+    # Let's say anomalies if output_kwh > 1000 (you can adjust)
+    if "output_kwh" in df.columns and "date" in df.columns:
+        anomalies = df[df["output_kwh"] > 1000][["date", "output_kwh"]]
+    else:
+        st.error("CSV missing required columns: 'date' and 'output_kwh'")
+        anomalies = pd.DataFrame()
 
-    # Run anomaly detection
-    model = IsolationForest(contamination=0.05, random_state=42)
-    df['anomaly'] = model.fit_predict(df[['output_kwh']]) == -1
-    anomalies = df[df['anomaly'] == True]
+    # Save alerts
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    alerts_filename = f"alerts_{timestamp}.csv"
+    alerts_path = os.path.join(GOOGLE_DRIVE_FOLDER, alerts_filename)
 
-    # Show summary (mock for now)
-    st.subheader("Weekly Summary")
-    st.markdown("**Anomalies detected on June 5 and 9.**")
+    if anomalies.empty:
+        df_to_save = pd.DataFrame({"message": ["No anomalies found"]})
+    else:
+        df_to_save = anomalies
 
-    # Plot anomalies on chart
-    st.subheader("Energy Output with Anomalies")
-    fig, ax = plt.subplots()
-    ax.plot(df["date"], df["output_kwh"], label="Output")
-    ax.scatter(anomalies["date"], anomalies["output_kwh"], color="red", label="Anomaly")
-    ax.set_title("Energy Output with Anomalies")
-    ax.legend()
-    st.pyplot(fig)
-
-    # Show anomalies table
-    st.subheader("Anomaly Table")
-    st.write(anomalies[["date", "output_kwh"]])
-
-    # ===== Save anomalies to Google Drive folder =====
-    if not os.path.exists(GOOGLE_DRIVE_FOLDER):
-        os.makedirs(GOOGLE_DRIVE_FOLDER)
-
-    alerts_path = os.path.join(GOOGLE_DRIVE_FOLDER, "alerts_today.csv")
-    anomalies[["date", "output_kwh"]].to_csv(alerts_path, index=False)
+    df_to_save.to_csv(alerts_path, index=False)
     st.success(f"Alerts saved to Google Drive folder: {alerts_path}")
 
 else:
-    st.info("Please upload a CSV file to view results.")
+    st.info("Please upload a CSV file to detect anomalies.")
