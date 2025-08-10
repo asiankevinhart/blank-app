@@ -2,60 +2,58 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import IsolationForest
+import os
 
-st.title("⚡ Energy AI Dashboard")
+# ===== CONFIG =====
+# Change this to your local Google Drive folder path
+# Example for Windows with Google Drive for Desktop:
+GOOGLE_DRIVE_FOLDER = r"G:\My Drive\EnergyAlerts"
 
+st.title("Energy AI Dashboard")
+
+# File uploader
 uploaded = st.file_uploader("Upload Energy Data (CSV)", type=["csv"])
 
 if uploaded:
+    # Load data
     df = pd.read_csv(uploaded)
 
-    # Basic validation
-    if 'date' not in df.columns or 'output_kwh' not in df.columns:
-        st.error("CSV must contain 'date' and 'output_kwh' columns.")
-        st.stop()
-
+    # Ensure date is in datetime format
     df['date'] = pd.to_datetime(df['date'])
 
+    # Show basic chart
     st.subheader("Energy Output Over Time")
-    st.line_chart(df.set_index('date')['output_kwh'])
+    st.line_chart(df['output_kwh'])
 
-    # Anomaly detection
+    # Run anomaly detection
     model = IsolationForest(contamination=0.05, random_state=42)
     df['anomaly'] = model.fit_predict(df[['output_kwh']]) == -1
-    anomalies = df[df['anomaly']]
+    anomalies = df[df['anomaly'] == True]
 
-    # Dynamic summary
-    if not anomalies.empty:
-        anomaly_dates = ", ".join(anomalies['date'].dt.strftime('%b %d').tolist())
-    else:
-        anomaly_dates = "None"
-
-    avg_kwh = df['output_kwh'].mean()
-    peak_kwh = df['output_kwh'].max()
-    summary = f"Avg = {avg_kwh:.1f} kWh, Anomalies = {anomaly_dates}, Peak = {peak_kwh:.1f} kWh"
-
+    # Show summary (mock for now)
     st.subheader("Weekly Summary")
-    st.markdown(f"**{summary}**")
+    st.markdown("**Anomalies detected on June 5 and 9.**")
 
-    # Visualization with anomalies highlighted
+    # Plot anomalies on chart
     st.subheader("Energy Output with Anomalies")
     fig, ax = plt.subplots()
-    ax.plot(df['date'], df['output_kwh'], label='Output (kWh)')
-    if not anomalies.empty:
-        ax.scatter(anomalies['date'], anomalies['output_kwh'], color='red', label='Anomaly')
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Output (kWh)")
-    ax.set_title("Energy Output and Anomalies")
+    ax.plot(df["date"], df["output_kwh"], label="Output")
+    ax.scatter(anomalies["date"], anomalies["output_kwh"], color="red", label="Anomaly")
+    ax.set_title("Energy Output with Anomalies")
     ax.legend()
     st.pyplot(fig)
 
-    # Anomaly table
-    st.subheader("Detected Anomalies")
-    if not anomalies.empty:
-        st.write(anomalies[['date', 'output_kwh']])
-    else:
-        st.write("No anomalies detected.")
+    # Show anomalies table
+    st.subheader("Anomaly Table")
+    st.write(anomalies[["date", "output_kwh"]])
+
+    # ===== Save anomalies to Google Drive folder =====
+    if not os.path.exists(GOOGLE_DRIVE_FOLDER):
+        os.makedirs(GOOGLE_DRIVE_FOLDER)
+
+    alerts_path = os.path.join(GOOGLE_DRIVE_FOLDER, "alerts_today.csv")
+    anomalies[["date", "output_kwh"]].to_csv(alerts_path, index=False)
+    st.success(f"Alerts saved to Google Drive folder: {alerts_path}")
 
 else:
-    st.info("Please upload a CSV file with 'date' and 'output_kwh' columns to get started.")
+    st.info("Please upload a CSV file to view results.")
