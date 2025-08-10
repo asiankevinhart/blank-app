@@ -7,7 +7,7 @@ import os
 # ===== CONFIG =====
 # Change this to your local Google Drive folder path
 # Example for Windows with Google Drive for Desktop:
-GOOGLE_DRIVE_FOLDER = r"G:\My Drive\EnergyAlerts"
+GOOGLE_DRIVE_FOLDER = r"G:\My Drive\Zapier Watch"
 
 st.title("Energy AI Dashboard")
 
