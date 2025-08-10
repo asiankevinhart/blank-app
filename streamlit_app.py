@@ -63,7 +63,7 @@ else:
 import os
 
 # Full path to your Zapier watch folder
-zapier_folder = r"E:\Google"
+zapier_folder = r"G:\My Drive\Zapier Watch"
 
 # Make sure folder exists
 os.makedirs(zapier_folder, exist_ok=True)
