@@ -59,3 +59,6 @@ if uploaded:
 
 else:
     st.info("Please upload a CSV file with 'date' and 'output_kwh' columns to get started.")
+
+anomalies[["date", "output_kwh"]].to_csv("alerts_today.csv", index=False)
+st.success("Exported alerts_today.csv for Zapier automation.")
